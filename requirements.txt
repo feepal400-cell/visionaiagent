@@ -1,4 +1,5 @@
 streamlit
+gradio
 groq==1.7.0
 opencv-python-headless
 python-dotenv==1.2.3
