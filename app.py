@@ -942,4 +942,11 @@ def build_app() -> gr.Blocks:
 demo = build_app()
 
 if __name__ == "__main__":
-    demo.launch(theme=APP_THEME, css=CUSTOM_CSS, js=DARK_MODE_JS)
+    demo.launch(
+        theme=APP_THEME,
+        css=CUSTOM_CSS,
+        js=DARK_MODE_JS,
+        server_name="0.0.0.0",
+        server_port=8501,
+        share=False
+    )
