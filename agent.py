@@ -405,6 +405,27 @@ def analyze_image(
     }
 
 
+def extract_chat_text(content: Any) -> str:
+    """Extract plain text from string, list of dicts, or Gradio TextMessage."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                parts.append(str(item.get("text", "")))
+            elif hasattr(item, "text"):
+                parts.append(str(getattr(item, "text", "")))
+        return " ".join(parts).strip()
+    if isinstance(content, dict):
+        return str(content.get("text", ""))
+    if hasattr(content, "text"):
+        return str(getattr(content, "text", ""))
+    return str(content) if content is not None else ""
+
+
 def ask_agent_question(
     user_question: str,
     image_path: str,
@@ -437,13 +458,15 @@ def ask_agent_question(
             ),
         }
     ]
+    normalized_history: list[dict[str, str]] = []
     for message in history:
         if not isinstance(message, dict):
             continue
-        role = message.get("role")
-        content = message.get("content")
-        if role in {"user", "assistant"} and isinstance(content, str):
-            conversation.append({"role": role, "content": content})
+        role = str(message.get("role", "")).strip()
+        text_content = extract_chat_text(message.get("content"))
+        if role in {"user", "assistant"} and text_content:
+            conversation.append({"role": role, "content": text_content})
+            normalized_history.append({"role": role, "content": text_content})
     conversation.append({"role": "user", "content": user_question.strip()})
 
     api_key = get_groq_api_key()
@@ -457,23 +480,9 @@ def ask_agent_question(
     if not isinstance(answer, str) or not answer.strip():
         raise MalformedResponseError("Groq returned an empty follow-up answer")
 
-    updated_history: list[dict[str, str]] = [
-        {
-            "role": str(message["role"]),
-            "content": str(message["content"]),
-        }
-        for message in history
-        if isinstance(message, dict)
-        and message.get("role") in {"user", "assistant"}
-        and isinstance(message.get("content"), str)
-    ]
-    updated_history.extend(
-        [
-            {"role": "user", "content": user_question.strip()},
-            {"role": "assistant", "content": answer.strip()},
-        ]
-    )
-    return updated_history
+    normalized_history.append({"role": "user", "content": user_question.strip()})
+    normalized_history.append({"role": "assistant", "content": answer.strip()})
+    return normalized_history
 
 
 run_agent = analyze_image

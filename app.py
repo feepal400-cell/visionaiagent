@@ -10,7 +10,7 @@ from pathlib import Path
 import gradio as gr
 from gradio.themes import Soft
 
-from agent import AgentError, DEFAULT_PROMPT, analyze_image, ask_agent_question
+from agent import AgentError, DEFAULT_PROMPT, analyze_image, ask_agent_question, extract_chat_text
 
 HISTORY_FILE = Path(__file__).parent / "analysis_history.json"
 
@@ -540,15 +540,73 @@ textarea:focus, input[type="text"]:focus {
     resize: vertical !important;
 }
 
-/* ── Chatbot ────────────────────────────────────────────────────────── */
-#scene-chatbot, #agent-chat {
-    background: #0e131b !important;
+/* ── Chatbot Complete Dark Styling ────────────────────────────────────── */
+#scene-chatbot, #agent-chat, .gradio-chatbot {
+    background: #0a0e14 !important;
     border: 1px solid var(--line) !important;
     border-radius: 14px !important;
 }
-#scene-chatbot .message, #scene-chatbot .message *,
-#agent-chat .message, #agent-chat .message * {
+#scene-chatbot .wrapper,
+#scene-chatbot [role="log"],
+#scene-chatbot .message-wrap,
+#scene-chatbot .bubble-wrap {
+    background: #0a0e14 !important;
+}
+/* Bot Message Bubble */
+#scene-chatbot [data-testid="bot"],
+#scene-chatbot .bot,
+#scene-chatbot [class*="bot"],
+#scene-chatbot div[class*="message"][class*="bot"],
+#scene-chatbot .message.bot {
+    background: #141c2a !important;
+    background-color: #141c2a !important;
     color: #eaf2f2 !important;
+    border: 1px solid rgba(94, 234, 212, 0.22) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+/* User Message Bubble */
+#scene-chatbot [data-testid="user"],
+#scene-chatbot .user,
+#scene-chatbot [class*="user"],
+#scene-chatbot div[class*="message"][class*="user"],
+#scene-chatbot .message.user {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.45) 0%, rgba(8, 145, 178, 0.45) 100%) !important;
+    background-color: rgba(13, 148, 136, 0.45) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(94, 234, 212, 0.4) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 16px rgba(13, 148, 136, 0.15) !important;
+}
+/* Text inside chatbot bubbles */
+#scene-chatbot [data-testid="bot"] *,
+#scene-chatbot .bot *,
+#scene-chatbot [class*="bot"] *,
+#scene-chatbot [data-testid="bot"] p,
+#scene-chatbot .prose p,
+#scene-chatbot [data-testid="bot"] li,
+#scene-chatbot [data-testid="bot"] span {
+    color: #eaf2f2 !important;
+    background: transparent !important;
+}
+#scene-chatbot [data-testid="user"] *,
+#scene-chatbot .user *,
+#scene-chatbot [class*="user"] *,
+#scene-chatbot [data-testid="user"] p {
+    color: #ffffff !important;
+    background: transparent !important;
+}
+#scene-chatbot [data-testid="bot"] strong {
+    color: #5eead4 !important;
+}
+#scene-chatbot button,
+#scene-chatbot svg {
+    color: #94a3b8 !important;
+    fill: currentColor !important;
+}
+#scene-chatbot button:hover,
+#scene-chatbot svg:hover {
+    color: #5eead4 !important;
 }
 #chat-send-btn {
     background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%) !important;
@@ -876,22 +934,69 @@ def run_analysis(
     return reasoning_md, status, annotated_image_path, _render_history_html()
 
 
-def handle_chat_query(
-    user_question: str,
-    image_path: str | None,
-    history: list[dict[str, str]] | None,
+def _normalize_message(m) -> dict[str, str] | None:
+    """Convert a Gradio ChatMessage or dict into a plain {role, content} dict."""
+    if isinstance(m, dict):
+        role = str(m.get("role", "user"))
+        content = extract_chat_text(m.get("content", ""))
+        return {"role": role, "content": content}
+    if hasattr(m, "role") and hasattr(m, "content"):
+        role = str(getattr(m, "role", "user"))
+        content = extract_chat_text(getattr(m, "content", ""))
+        return {"role": role, "content": content}
+    return None
+
+
+def _normalize_history(history: list | None) -> list[dict[str, str]]:
+    """Convert a Gradio chatbot history into a clean list of {role, content} dicts."""
+    result = []
+    for m in (history or []):
+        normalized = _normalize_message(m)
+        if normalized:
+            result.append(normalized)
+    return result
+
+
+def user_turn(
+    question: str,
+    history: list | None,
 ) -> tuple[list[dict[str, str]], str]:
-    """Process follow-up questions about the analyzed image using YOLO metadata."""
-    if not image_path:
-        raise gr.Error("⚠️ Please upload and analyze an image before asking questions.")
-    if not user_question or not user_question.strip():
+    """Immediately append the user question to chat history and clear the text input."""
+    if not question or not question.strip():
         return history or [], ""
+    h = _normalize_history(history)
+    h.append({"role": "user", "content": question.strip()})
+    return h, ""
+
+
+def bot_turn(
+    image_path: str | None,
+    history: list | None,
+) -> list[dict[str, str]]:
+    """Process agent answer using YOLO metadata and Groq LLM."""
+    if not history:
+        return []
+    if not image_path:
+        h = _normalize_history(history)
+        h.append({
+            "role": "assistant",
+            "content": "⚠️ Please upload and analyze an image in the INPUT panel first before asking questions.",
+        })
+        return h
+
+    h = _normalize_history(history)
+    if not h or h[-1].get("role") != "user":
+        return h
+
+    last_question = h[-1].get("content", "")
+    prior_history = h[:-1]
     try:
-        updated_history = ask_agent_question(user_question.strip(), image_path, history)
-        return updated_history, ""
+        updated = ask_agent_question(last_question, image_path, prior_history)
+        return updated
     except Exception as error:
         print(f"[Chat Query Error] {error}", flush=True)
-        raise gr.Error(f"❌ {error}") from error
+        h.append({"role": "assistant", "content": f"❌ Could not answer: {error}"})
+        return h
 
 
 def build_app() -> gr.Blocks:
@@ -999,15 +1104,25 @@ def build_app() -> gr.Blocks:
         )
 
         chat_send_btn.click(
-            fn=handle_chat_query,
-            inputs=[chat_msg, image_input, chatbot],
+            fn=user_turn,
+            inputs=[chat_msg, chatbot],
             outputs=[chatbot, chat_msg],
+            queue=False,
+        ).then(
+            fn=bot_turn,
+            inputs=[image_input, chatbot],
+            outputs=chatbot,
         )
 
         chat_msg.submit(
-            fn=handle_chat_query,
-            inputs=[chat_msg, image_input, chatbot],
+            fn=user_turn,
+            inputs=[chat_msg, chatbot],
             outputs=[chatbot, chat_msg],
+            queue=False,
+        ).then(
+            fn=bot_turn,
+            inputs=[image_input, chatbot],
+            outputs=chatbot,
         )
 
         chat_clear_btn.click(
