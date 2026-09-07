@@ -27,8 +27,9 @@ _DETECTION_CACHE: dict[str, dict[str, Any]] = {}
 # Includes verified free, fast, tool-calling supported models on Groq.
 MODEL_PRIORITY = [
     "qwen/qwen3.8-27b",
-    "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.6-27b",
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
 ]
@@ -81,8 +82,21 @@ class MalformedResponseError(AgentError):
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+def get_groq_api_key() -> str | None:
+    """Retrieve GROQ_API_KEY from environment or Streamlit Cloud secrets."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if api_key and api_key.strip():
+        return api_key.strip()
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+            val = str(st.secrets["GROQ_API_KEY"]).strip()
+            if val:
+                os.environ["GROQ_API_KEY"] = val
+                return val
+    except Exception:
+        pass
+    return None
 
 
 def _encode_image(image_path: str) -> str:
@@ -179,7 +193,7 @@ _MODEL_ERROR_TYPES: tuple[type[Exception], ...] = (
 )
 
 # Free-tier Groq caps output tokens at 1000/min. Stay safely under.
-_MAX_TOKENS = 900
+_MAX_TOKENS = 350
 
 
 def _create_completion(
@@ -245,10 +259,10 @@ def analyze_image(
     if not isinstance(conf_threshold, (int, float)) or not 0.1 <= conf_threshold <= 0.9:
         raise ValueError("conf_threshold must be between 0.1 and 0.9")
 
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key or not api_key.strip():
+    api_key = get_groq_api_key()
+    if not api_key:
         raise ConfigurationError(
-            "GROQ_API_KEY is not configured. Add it to the environment or .env file."
+            "GROQ_API_KEY is not configured. For Streamlit Cloud, add GROQ_API_KEY in App Settings > Secrets. For local, add it to your .env file."
         )
 
     client = Groq(api_key=api_key)
@@ -432,10 +446,10 @@ def ask_agent_question(
             conversation.append({"role": role, "content": content})
     conversation.append({"role": "user", "content": user_question.strip()})
 
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key or not api_key.strip():
+    api_key = get_groq_api_key()
+    if not api_key:
         raise ConfigurationError(
-            "GROQ_API_KEY is not configured. Add it to the environment or .env file."
+            "GROQ_API_KEY is not configured. For Streamlit Cloud, add GROQ_API_KEY in App Settings > Secrets. For local, add it to your .env file."
         )
     client = Groq(api_key=api_key)
     response, _ = _create_completion(client, conversation, tool_choice="none")

@@ -75,15 +75,17 @@ html, body, .gradio-container {
 }
 
 .gradio-container {
-    max-width: 1400px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
+    box-sizing: border-box !important;
     background:
         radial-gradient(circle at 10% 0%, rgba(45, 212, 191, 0.10), transparent 32%),
         radial-gradient(circle at 90% 15%, rgba(56, 189, 248, 0.08), transparent 30%),
         radial-gradient(circle at 50% 100%, rgba(167, 139, 250, 0.06), transparent 40%),
         var(--bg) !important;
     min-height: 100vh;
-    padding: 24px 20px !important;
+    padding: 20px 24px !important;
 }
 .main { background: transparent !important; }
 
@@ -630,7 +632,7 @@ function() {
 """
 
 
-def _status_html(state: str, model: str = "", elapsed: float = 0.0) -> str:
+def _status_html(state: str, model: str = "", elapsed: float = 0.0, error_msg: str = "") -> str:
     """Build the status bar HTML."""
     if state == "running":
         return (
@@ -651,10 +653,11 @@ def _status_html(state: str, model: str = "", elapsed: float = 0.0) -> str:
             f'{model_tag}'
         )
     if state == "error":
+        msg = f" — {error_msg}" if error_msg else " — See message above"
         return (
-            '<span class="status-dot error"></span> '
-            '<strong style="color:#fca5a5;">ERROR</strong> '
-            '<span style="margin-left:12px;color:#ef4444;">— See message above</span>'
+            f'<span class="status-dot error"></span> '
+            f'<strong style="color:#fca5a5;">ERROR</strong> '
+            f'<span style="margin-left:12px;color:#ef4444;">{msg}</span>'
         )
     return IDLE_STATUS
 
@@ -699,33 +702,31 @@ def _render_history_html() -> str:
         status_dot = "#34d399" if was_detected else "#f87171"
         status_label = "Detected" if was_detected else "No Detection"
 
+        badge_bg = "rgba(52,211,153,0.12)" if was_detected else "rgba(148,163,184,0.12)"
+        badge_color = "#34d399" if was_detected else "#94a3b8"
+        badge_border = "rgba(52,211,153,0.25)" if was_detected else "rgba(148,163,184,0.25)"
+        status_badge = (
+            f'<span style="padding:4px 10px; font-size:0.75rem; font-weight:600; border-radius:8px; '
+            f'background:{badge_bg}; color:{badge_color}; border:1px solid {badge_border}; white-space:nowrap;">'
+            f'{detected}</span>'
+        )
+
         rows.append(
-            f'<div style="display:flex; align-items:center; gap:14px; padding:14px 18px; '
+            f'<div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px; '
             f'background:#0e131b; border:1px solid rgba(94,234,212,0.12); border-radius:12px; '
             f'margin-bottom:10px; transition:border-color 0.2s;" '
             f'onmouseover="this.style.borderColor=\'rgba(94,234,212,0.35)\'" '
             f'onmouseout="this.style.borderColor=\'rgba(94,234,212,0.12)\'">' 
-            f'  <div style="flex-shrink:0; width:10px; height:10px; border-radius:50%; background:{status_dot};"></div>'
-            f'  <div style="flex:1; min-width:0;">'
-            f'    <p style="margin:0; font-size:0.88rem; font-weight:600; color:#e2e8f0; '
-            f'       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{name}</p>'
-            f'    <p style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">'
-            f'      {ts} &nbsp;·&nbsp; {status_label} &nbsp;·&nbsp; {detected} &nbsp;·&nbsp; {elapsed}s</p>'
+            f'  <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">'
+            f'    <div style="flex-shrink:0; width:10px; height:10px; border-radius:50%; background:{status_dot};"></div>'
+            f'    <div style="min-width:0; flex:1;">'
+            f'      <p style="margin:0; font-size:0.88rem; font-weight:600; color:#e2e8f0; '
+            f'         overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{name}</p>'
+            f'      <p style="margin:2px 0 0; font-size:0.75rem; color:#64748b;">'
+            f'        {ts} &nbsp;·&nbsp; {status_label} &nbsp;·&nbsp; {elapsed}s</p>'
+            f'    </div>'
             f'  </div>'
-            f'  <button onclick="document.getElementById(\'view-idx\').value=\'{idx}\'; '
-            f'    document.getElementById(\'view-idx\').dispatchEvent(new Event(\'input\'));" '
-            f'    style="padding:6px 14px; font-size:0.75rem; font-weight:600; border-radius:8px; '
-            f'    border:1px solid rgba(94,234,212,0.3); background:rgba(94,234,212,0.1); '
-            f'    color:#5eead4; cursor:pointer; transition:all 0.2s;" '
-            f'    onmouseover="this.style.background=\'rgba(94,234,212,0.2)\'" '
-            f'    onmouseout="this.style.background=\'rgba(94,234,212,0.1)\'">👁 View</button>'
-            f'  <button onclick="document.getElementById(\'del-idx\').value=\'{idx}\'; '
-            f'    document.getElementById(\'del-idx\').dispatchEvent(new Event(\'input\'));" '
-            f'    style="padding:6px 14px; font-size:0.75rem; font-weight:600; border-radius:8px; '
-            f'    border:1px solid rgba(248,113,113,0.3); background:rgba(248,113,113,0.1); '
-            f'    color:#fca5a5; cursor:pointer; transition:all 0.2s;" '
-            f'    onmouseover="this.style.background=\'rgba(248,113,113,0.2)\'" '
-            f'    onmouseout="this.style.background=\'rgba(248,113,113,0.1)\'">🗑 Delete</button>'
+            f'  <div style="flex-shrink:0;">{status_badge}</div>'
             f'</div>'
         )
 
@@ -784,7 +785,8 @@ def run_analysis(
 
     try:
         result = analyze_image(image_path, prompt, conf_threshold)
-    except (AgentError, ValueError, FileNotFoundError, OSError) as error:
+    except Exception as error:
+        print(f"[Agent Analysis Error] {error}", flush=True)
         # Save failed attempt to history
         history = _load_history()
         history.append({
@@ -904,9 +906,6 @@ def build_app() -> gr.Blocks:
                                 value=_render_history_html(),
                                 elem_id="history-panel",
                             )
-                            # Hidden textboxes to relay button clicks from HTML
-                            del_idx = gr.Textbox(visible=False, elem_id="del-idx")
-                            view_idx = gr.Textbox(visible=False, elem_id="view-idx")
 
         status_bar = gr.HTML(
             value=IDLE_STATUS,
@@ -924,18 +923,6 @@ def build_app() -> gr.Blocks:
             outputs=[reasoning_output, status_bar, annotated_output, history_display],
         )
 
-        del_idx.input(
-            fn=_delete_history_entry,
-            inputs=del_idx,
-            outputs=history_display,
-        )
-
-        view_idx.input(
-            fn=_view_history_entry,
-            inputs=view_idx,
-            outputs=[reasoning_output, status_bar, annotated_output],
-        )
-
     return app
 
 
@@ -943,7 +930,8 @@ demo = build_app()
 
 import os
 import socket
-import streamlit as st
+import tempfile
+from pathlib import Path
 
 def get_open_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -953,24 +941,86 @@ def get_open_port():
     return port
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Vision AI Agent", layout="wide")
+    is_streamlit = False
+    try:
+        import streamlit as st
+        # Verify if running within an active Streamlit runtime context
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        is_streamlit = get_script_run_ctx() is not None
+    except Exception:
+        is_streamlit = False
 
-    # Prevent duplicate server initialization on Streamlit reruns
-    if "gradio_url" not in st.session_state:
-        port = get_open_port()
-        # share=True ensures Gradio creates a working public tunnel URL for Streamlit Cloud
-        _, local_url, share_url = demo.launch(
+    if is_streamlit:
+        st.set_page_config(page_title="Vision AI Agent", layout="wide", initial_sidebar_state="collapsed")
+
+        # Seamless full-width & full-height styling for Streamlit
+        st.markdown(
+            """
+            <style>
+            #MainMenu {visibility: hidden !important;}
+            header {visibility: hidden !important; height: 0 !important;}
+            footer {visibility: hidden !important; height: 0 !important;}
+            .stApp {
+                background-color: #0a0e14 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .stAppHeader {
+                display: none !important;
+            }
+            .block-container {
+                padding: 0 !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                width: 100% !important;
+            }
+            iframe {
+                width: 100% !important;
+                height: 100vh !important;
+                min-height: 980px !important;
+                border: none !important;
+                display: block !important;
+                background-color: #0a0e14 !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Sync Streamlit Cloud secrets to environment variables
+        if hasattr(st, "secrets"):
+            try:
+                for key, val in st.secrets.items():
+                    if isinstance(val, str) and key not in os.environ:
+                        os.environ[key] = val
+            except Exception:
+                pass
+
+        # Prevent duplicate server initialization on Streamlit reruns
+        if "gradio_url" not in st.session_state:
+            port = get_open_port()
+            # allowed_paths ensures Gradio permits serving generated output images
+            _, local_url, share_url = demo.launch(
+                theme=APP_THEME,
+                css=CUSTOM_CSS,
+                js=DARK_MODE_JS,
+                server_name="0.0.0.0",
+                server_port=port,
+                share=True,
+                prevent_thread_lock=True,
+                quiet=True,
+                allowed_paths=[str(Path.cwd()), tempfile.gettempdir()],
+            )
+            # Use share URL if on cloud, fallback to local IP
+            st.session_state["gradio_url"] = share_url if share_url else f"http://127.0.0.1:{port}"
+
+        # Modern Streamlit native iframe integration
+        st.iframe(st.session_state["gradio_url"], height=980)
+    else:
+        # Standalone Gradio launch
+        demo.launch(
             theme=APP_THEME,
             css=CUSTOM_CSS,
             js=DARK_MODE_JS,
-            server_name="0.0.0.0",
-            server_port=port,
-            share=True,
-            prevent_thread_lock=True,
-            quiet=True
+            allowed_paths=[str(Path.cwd()), tempfile.gettempdir()],
         )
-        # Use share URL if on cloud, fallback to local IP
-        st.session_state["gradio_url"] = share_url if share_url else f"http://127.0.0.1:{port}"
-
-    # Modern Streamlit native iframe integration
-    st.iframe(st.session_state["gradio_url"], height=800)

@@ -12,7 +12,7 @@ import cv2
 
 YOLO: Any = None
 
-MODEL_PATH = "yolo11m.pt"
+MODEL_PATH = str(Path(__file__).resolve().parent.parent / "yolo11m.pt")
 ANNOTATED_FILENAME = "output_annotated.jpg"
 
 # Image extensions we consider valid before sending to YOLO.
@@ -214,8 +214,10 @@ def detect_objects(image_path: str, conf_threshold: float = 0.35) -> str:
     with tempfile.TemporaryDirectory(prefix="vision-agent-") as temporary_directory:
         inference_path = _prepare_yolo_source(source_path, Path(temporary_directory))
         try:
-            model = yolo_class(MODEL_PATH)
-            results = list(model(str(inference_path), conf=float(conf_threshold)))
+            # Fall back to base model name if file not on disk
+            weights = MODEL_PATH if Path(MODEL_PATH).exists() else "yolo11m.pt"
+            model = yolo_class(weights)
+            results = list(model(str(inference_path), conf=float(conf_threshold), device="cpu"))
         except Exception as error:
             raise RuntimeError(
                 f"YOLO inference failed: {error}. "
@@ -224,7 +226,7 @@ def detect_objects(image_path: str, conf_threshold: float = 0.35) -> str:
         if not results:
             raise ValueError("YOLO returned no results")
         result = results[0]
-        output_path = Path.cwd() / ANNOTATED_FILENAME
+        output_path = Path(__file__).resolve().parent.parent / ANNOTATED_FILENAME
 
     image_width, image_height = _image_dimensions(result, source_path)
 
