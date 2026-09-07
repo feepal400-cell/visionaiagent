@@ -953,25 +953,24 @@ def get_open_port():
     return port
 
 if __name__ == "__main__":
-    # Prevent duplicate server initialization in Streamlit reruns
-    if "gradio_launched" not in st.session_state:
+    st.set_page_config(page_title="Vision AI Agent", layout="wide")
+
+    # Prevent duplicate server initialization on Streamlit reruns
+    if "gradio_url" not in st.session_state:
         port = get_open_port()
-        demo.launch(
+        # share=True ensures Gradio creates a working public tunnel URL for Streamlit Cloud
+        _, local_url, share_url = demo.launch(
             theme=APP_THEME,
             css=CUSTOM_CSS,
             js=DARK_MODE_JS,
             server_name="0.0.0.0",
             server_port=port,
+            share=True,
             prevent_thread_lock=True,
-            inline=False,
             quiet=True
         )
-        st.session_state["gradio_launched"] = True
-        st.session_state["gradio_port"] = port
+        # Use share URL if on cloud, fallback to local IP
+        st.session_state["gradio_url"] = share_url if share_url else f"http://127.0.0.1:{port}"
 
-    # Streamlit page view
-    st.set_page_config(page_title="Vision AI Agent", layout="wide")
-    st.components.v1.html(
-        f'<iframe src="http://localhost:{st.session_state["gradio_port"]}" width="100%" height="800" frameborder="0"></iframe>',
-        height=800
-    )
+    # Modern Streamlit native iframe integration
+    st.iframe(st.session_state["gradio_url"], height=800)
