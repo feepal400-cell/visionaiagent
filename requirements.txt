@@ -1,5 +1,5 @@
-gradio==6.26.0
+streamlit
 groq==1.7.0
-opencv_python==5.0.0.93
+opencv-python-headless
 python-dotenv==1.2.3
 ultralytics==8.4.138
