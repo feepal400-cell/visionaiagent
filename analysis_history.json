@@ -1,0 +1,72 @@
+[
+  {
+    "filename": "images.jfif",
+    "timestamp": "2026-09-05 16:20",
+    "objects_detected": "1 cat",
+    "was_detected": true,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 11.18,
+    "description": "One object was detected:\n\n- **Cat** — confidence 0.93, located in the center-center of the image (bounding box roughly x=17, y=14, width≈142, height≈200).\n\nNo other objects were detected.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "Skyline-Pro-Next.png",
+    "timestamp": "2026-09-05 16:20",
+    "objects_detected": "1 bus",
+    "was_detected": true,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 3.3,
+    "description": "One object was detected in the image:\n\n- **Bus**: Located in the **center-center** of the image. Bounding box spans from approximately (41, 58) to (417, 283), with a high confidence score of 0.96.\n\nNo other objects were detected.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "Usamljeni_jasen_-_panoramio_(cropped).jpg",
+    "timestamp": "2026-09-05 16:24",
+    "objects_detected": "No objects detected",
+    "was_detected": false,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 3.54,
+    "description": "No objects were detected in the provided image.\n",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "picture-full-hd-quality-tree-260nw-2556311885.webp",
+    "timestamp": "2026-09-05 16:25",
+    "objects_detected": "No objects detected",
+    "was_detected": false,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 3.38,
+    "description": "The object detection tool found no detectable objects in the image. The scene contains no identified objects to describe.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "picture-full-hd-quality-tree-260nw-2556311885.webp",
+    "timestamp": "2026-09-05 16:25",
+    "objects_detected": "1 bird",
+    "was_detected": true,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 4.16,
+    "description": "The detector found one object: a bird in the center-center area (bounding box roughly 90, 115 to 189, 226, low confidence ~0.14). No other objects were reported.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "Brown-Horse-Clipart-GraphicsFairy.jpg",
+    "timestamp": "2026-09-05 16:26",
+    "objects_detected": "1 horse",
+    "was_detected": true,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 3.32,
+    "description": "The image contains one detected object:\n\n- **Horse** (confidence 0.96): located in the **center-center** of the image, spanning most of the frame (bounding box x≈3–1246, y≈14–984).\n\nNo other objects were detected.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  },
+  {
+    "filename": "360_F_9085486_EE5ha1cNDfYgSc23pWXLTwjyX0pP5zV9.jpg",
+    "timestamp": "2026-09-05 16:27",
+    "objects_detected": "1 banana",
+    "was_detected": true,
+    "model_used": "qwen/qwen3.8-27b",
+    "elapsed": 3.5,
+    "description": "Detected 1 object:\n\n- Banana (confidence 0.81): located at the center of the image (center-center), with bounding box approximately [60.96, 50.68, 386.74, 298.24].\n\nThe scene contains a single banana positioned in the middle of the frame. No other objects were detected.",
+    "annotated_path": "C:\\Users\\Zoraiz Mustafa\\Desktop\\vision-agent-ai\\output_annotated.jpg"
+  }
+]
