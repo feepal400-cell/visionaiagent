@@ -942,16 +942,22 @@ def build_app() -> gr.Blocks:
 demo = build_app()
 
 import os
+import socket
+
+def find_free_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
 
 if __name__ == "__main__":
-    # Streamlit Cloud runtime detect karne ke liye port 7860 use karein
-    port = int(os.environ.get("PORT", 7860))
+    # Automatic free port detect karega taake 7860/8501 conflict na ho
+    free_port = find_free_port()
     
     demo.launch(
         theme=APP_THEME,
         css=CUSTOM_CSS,
         js=DARK_MODE_JS,
         server_name="0.0.0.0",
-        server_port=port,
-        share=True  # Streamlit Cloud par public link/tunnel allow karne ke liye
+        server_port=free_port,
+        share=True
     )
