@@ -10,7 +10,7 @@ from pathlib import Path
 import gradio as gr
 from gradio.themes import Soft
 
-from agent import AgentError, DEFAULT_PROMPT, analyze_image
+from agent import AgentError, DEFAULT_PROMPT, analyze_image, ask_agent_question
 
 HISTORY_FILE = Path(__file__).parent / "analysis_history.json"
 
@@ -374,22 +374,39 @@ button[role="tab"].selected * {
 .image-frame img { border-radius: 12px !important; object-fit: contain !important; }
 
 #input-image {
-    background: var(--surface) !important;
-    border: 1px solid var(--line) !important;
+    background: #0d131d !important;
+    border: 1.5px dashed rgba(94, 234, 212, 0.25) !important;
     border-radius: 14px !important;
+    transition: all 0.25s ease !important;
+    overflow: hidden !important;
+}
+#input-image:hover {
+    border-color: rgba(94, 234, 212, 0.6) !important;
+    box-shadow: 0 0 24px rgba(45, 212, 191, 0.08) !important;
 }
 #input-image label, #input-image .label-wrap {
-    background: var(--surface-2) !important;
-    color: #99f6e4 !important;
+    background: #141c2a !important;
+    color: #5eead4 !important;
 }
-#input-image .image-container, #input-image .image-frame,
-#input-image .upload-container, #input-image .wrap, #input-image .empty {
-    background: linear-gradient(145deg, #16202f, #101725) !important;
+#input-image .image-container, 
+#input-image .image-frame,
+#input-image .upload-container, 
+#input-image .wrap, 
+#input-image .empty,
+#input-image button,
+#input-image > div {
+    background: transparent !important;
     color: #e2e8f0 !important;
+    width: 100% !important;
 }
 #input-image .upload-text, #input-image .upload-text *, #input-image .or,
-#input-image button, #input-image svg { color: #99f6e4 !important; }
-#input-image button:hover { background: rgba(45, 212, 191, 0.14) !important; }
+#input-image svg { 
+    color: #5eead4 !important; 
+    fill: #5eead4 !important;
+}
+#input-image button:hover { 
+    background: rgba(45, 212, 191, 0.08) !important; 
+}
 
 /* ── Form Controls & General Block Theme Fixes ───────────────────────── */
 .block {
@@ -524,23 +541,39 @@ textarea:focus, input[type="text"]:focus {
 }
 
 /* ── Chatbot ────────────────────────────────────────────────────────── */
-#agent-chat {
-    background: var(--surface) !important;
+#scene-chatbot, #agent-chat {
+    background: #0e131b !important;
     border: 1px solid var(--line) !important;
     border-radius: 14px !important;
 }
+#scene-chatbot .message, #scene-chatbot .message *,
 #agent-chat .message, #agent-chat .message * {
     color: #eaf2f2 !important;
 }
-#agent-chat .bot {
-    background: #16202f !important;
-    color: #eaf2f2 !important;
-    border: 1px solid var(--line) !important;
-}
-#agent-chat .user {
-    background: rgba(45, 212, 191, 0.18) !important;
+#chat-send-btn {
+    background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(45, 212, 191, 0.3) !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+#chat-send-btn:hover {
+    filter: brightness(1.15) !important;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4) !important;
+}
+#chat-clear-btn {
+    background: rgba(30, 41, 59, 0.6) !important;
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    cursor: pointer !important;
+}
+#chat-clear-btn:hover {
+    color: #e2e8f0 !important;
+    background: rgba(51, 65, 85, 0.8) !important;
 }
 
 /* ── Status bar ────────────────────────────────────────────────────── */
@@ -596,11 +629,16 @@ textarea:focus, input[type="text"]:focus {
 HEADER_HTML = """
 <div>
     <h1>VISION AGENT AI</h1>
-    <p>Self-Analyzing AI Vision System</p>
+    <p style="font-size: 1.02rem; font-weight: 600; color: #5eead4; margin: 4px 0 8px 0; letter-spacing: 0.6px;">
+        Autonomous Multi-Stage Scene Perception & Reasoning Agent
+    </p>
+    <p style="font-size: 0.92rem; color: #cbd5e1; margin: 0 0 16px 0; line-height: 1.65; max-width: 860px; font-weight: 400; letter-spacing: 0.2px;">
+        An autonomous vision intelligence system that performs high-precision <strong>YOLO object detection</strong> with 3×3 spatial grid mapping, and utilizes Groq LLMs to extract instant <strong>scene analysis, visual reasoning, and spatial object breakdown</strong>.
+    </p>
     <div class="badge-row">
-        <span class="badge-tag badge-agent">🤖 Autonomous Agent</span>
-        <span class="badge-tag badge-yolo">📦 YOLOv8 Perception</span>
-        <span class="badge-tag badge-groq">⚡ Groq Powered</span>
+        <span class="badge-tag badge-agent">🤖 Autonomous Vision Agent</span>
+        <span class="badge-tag badge-yolo">📦 YOLO11 Real-Time Detection</span>
+        <span class="badge-tag badge-groq">⚡ Groq LLM Scene Reasoning</span>
     </div>
 </div>
 """
@@ -838,6 +876,24 @@ def run_analysis(
     return reasoning_md, status, annotated_image_path, _render_history_html()
 
 
+def handle_chat_query(
+    user_question: str,
+    image_path: str | None,
+    history: list[dict[str, str]] | None,
+) -> tuple[list[dict[str, str]], str]:
+    """Process follow-up questions about the analyzed image using YOLO metadata."""
+    if not image_path:
+        raise gr.Error("⚠️ Please upload and analyze an image before asking questions.")
+    if not user_question or not user_question.strip():
+        return history or [], ""
+    try:
+        updated_history = ask_agent_question(user_question.strip(), image_path, history)
+        return updated_history, ""
+    except Exception as error:
+        print(f"[Chat Query Error] {error}", flush=True)
+        raise gr.Error(f"❌ {error}") from error
+
+
 def build_app() -> gr.Blocks:
     """Construct and return the Gradio Blocks app."""
     with gr.Blocks(
@@ -901,6 +957,21 @@ def build_app() -> gr.Blocks:
                                 value=PLACEHOLDER_MD,
                                 elem_id="ai-reasoning",
                             )
+                        with gr.Tab("💬 Ask About Scene"):
+                            chatbot = gr.Chatbot(
+                                height=360,
+                                placeholder="💡 Ask any question about the detected objects, locations, colors, or visual scene details after running an analysis...",
+                                elem_id="scene-chatbot",
+                            )
+                            with gr.Row():
+                                chat_msg = gr.Textbox(
+                                    placeholder="Ask a question (e.g. 'Where is the object located?', 'List all items detected')...",
+                                    show_label=False,
+                                    scale=8,
+                                    elem_id="chat-input",
+                                )
+                                chat_send_btn = gr.Button("Ask Agent 🚀", variant="primary", scale=2, elem_id="chat-send-btn")
+                                chat_clear_btn = gr.Button("Clear 🔄", variant="secondary", scale=1, elem_id="chat-clear-btn")
                         with gr.Tab("📂 Analysis History"):
                             history_display = gr.HTML(
                                 value=_render_history_html(),
@@ -921,6 +992,28 @@ def build_app() -> gr.Blocks:
             fn=run_analysis,
             inputs=[image_input, prompt_input, confidence_slider],
             outputs=[reasoning_output, status_bar, annotated_output, history_display],
+        ).then(
+            fn=lambda: ([{"role": "assistant", "content": "✨ Image analyzed! Ask me anything about the detected objects, their positions, or details in this scene."}], ""),
+            inputs=None,
+            outputs=[chatbot, chat_msg],
+        )
+
+        chat_send_btn.click(
+            fn=handle_chat_query,
+            inputs=[chat_msg, image_input, chatbot],
+            outputs=[chatbot, chat_msg],
+        )
+
+        chat_msg.submit(
+            fn=handle_chat_query,
+            inputs=[chat_msg, image_input, chatbot],
+            outputs=[chatbot, chat_msg],
+        )
+
+        chat_clear_btn.click(
+            fn=lambda: ([], ""),
+            inputs=None,
+            outputs=[chatbot, chat_msg],
         )
 
     return app
