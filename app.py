@@ -943,21 +943,35 @@ demo = build_app()
 
 import os
 import socket
+import streamlit as st
 
-def find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
+def get_open_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 if __name__ == "__main__":
-    # Automatic free port detect karega taake 7860/8501 conflict na ho
-    free_port = find_free_port()
-    
-    demo.launch(
-        theme=APP_THEME,
-        css=CUSTOM_CSS,
-        js=DARK_MODE_JS,
-        server_name="0.0.0.0",
-        server_port=free_port,
-        share=True
+    # Prevent duplicate server initialization in Streamlit reruns
+    if "gradio_launched" not in st.session_state:
+        port = get_open_port()
+        demo.launch(
+            theme=APP_THEME,
+            css=CUSTOM_CSS,
+            js=DARK_MODE_JS,
+            server_name="0.0.0.0",
+            server_port=port,
+            prevent_thread_lock=True,
+            inline=False,
+            quiet=True
+        )
+        st.session_state["gradio_launched"] = True
+        st.session_state["gradio_port"] = port
+
+    # Streamlit page view
+    st.set_page_config(page_title="Vision AI Agent", layout="wide")
+    st.components.v1.html(
+        f'<iframe src="http://localhost:{st.session_state["gradio_port"]}" width="100%" height="800" frameborder="0"></iframe>',
+        height=800
     )
