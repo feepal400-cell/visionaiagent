@@ -1,6 +1,6 @@
 streamlit
 gradio
 groq==1.7.0
-opencv-python-headless
+opencv-python-headless==4.10.0.84
 python-dotenv==1.2.3
 ultralytics==8.4.138
